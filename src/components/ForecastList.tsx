@@ -1,21 +1,31 @@
+import { memo } from 'react';
 import type { ForecastDay, Unit } from '../types/weather';
 import ForecastCard from './ForecastCard';
 
 interface ForecastListProps {
   forecast: ForecastDay[];
+  timezone: string;
   unit: Unit;
 }
 
-/** Grid responsivo com a previsão de 5 dias. */
-export default function ForecastList({ forecast, unit }: ForecastListProps) {
+function ForecastList({ forecast, timezone, unit }: ForecastListProps) {
   return (
-    <section aria-label="Previsão de 5 dias">
-      <h2 className="mb-4 text-xl font-bold">Previsão de 5 dias</h2>
+    <section aria-labelledby="forecast-heading">
+      <h2
+        id="forecast-heading"
+        className="mb-3 text-sm font-medium uppercase tracking-wide text-white/60"
+      >
+        Previsão de 5 dias
+      </h2>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {forecast.map((day, index) => (
-          <ForecastCard key={day.date} day={day} index={index} unit={unit} />
+        {forecast.map((day) => (
+          <li key={day.date}>
+            <ForecastCard day={day} timezone={timezone} unit={unit} />
+          </li>
         ))}
       </ul>
     </section>
   );
 }
+
+export default memo(ForecastList);
