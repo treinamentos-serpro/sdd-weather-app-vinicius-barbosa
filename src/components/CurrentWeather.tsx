@@ -1,77 +1,81 @@
-import type { CurrentWeather as CurrentWeatherType, City, Unit } from '../types/weather';
-import { formatTemperature } from '../lib/temperature';
-import { getWeatherIcon, getWeatherLabel } from '../lib/weatherCodes';
+import { memo } from 'react';
+import { toDisplayTemperature } from '../lib/temperature';
+import { mapWeatherCode } from '../lib/weatherCode';
+import type { City, CurrentWeather as CurrentWeatherData, Unit } from '../types/weather';
 
 interface CurrentWeatherProps {
   city: City;
-  current: CurrentWeatherType;
+  current: CurrentWeatherData;
   unit: Unit;
 }
 
-interface MetricProps {
-  icon: string;
-  label: string;
-  value: string;
+function formatTemperature(valueC: number | null | undefined, unit: Unit): string {
+  if (typeof valueC !== 'number' || !Number.isFinite(valueC)) return '—';
+  const value = toDisplayTemperature(valueC, unit);
+  if (value === undefined || !Number.isFinite(value)) return '—';
+  return `${Math.round(value)}°${unit === 'celsius' ? 'C' : 'F'}`;
 }
 
-function Metric({ icon, label, value }: MetricProps) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md">
-      <span aria-hidden="true" className="text-xl">
-        {icon}
-      </span>
-      <div>
-        <p className="text-xs text-white/50">{label}</p>
-        <p className="font-semibold">{value}</p>
-      </div>
-    </div>
-  );
+function formatMetric(value: number | null | undefined, suffix: string): string {
+  return typeof value !== 'number' || !Number.isFinite(value) ? '—' : `${value}${suffix}`;
 }
 
-/** Seção "hero" com as condições atuais da cidade selecionada. */
-export default function CurrentWeather({ city, current, unit }: CurrentWeatherProps) {
-  const location = [city.admin1, city.country].filter(Boolean).join(', ');
+function CurrentWeather({ city, current, unit }: CurrentWeatherProps) {
+  const { label, icon } = mapWeatherCode(current.weatherCode);
 
   return (
     <section
-      aria-label="Clima atual"
-      className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md shadow-glass md:p-8"
+      aria-label={`Clima atual em ${city.name}`}
+      className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-glass backdrop-blur-md"
     >
-      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+      <header className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold md:text-3xl">{city.name}</h2>
-          {location && <p className="text-white/60">{location}</p>}
-
-          <div className="mt-6 flex items-center gap-4">
-            <span aria-hidden="true" className="text-6xl">
-              {getWeatherIcon(current.weatherCode)}
-            </span>
-            <span className="text-6xl font-light md:text-7xl">
-              {formatTemperature(current.temperature, unit)}
-            </span>
-          </div>
-          <p className="mt-2 text-white/70">{getWeatherLabel(current.weatherCode)}</p>
+          <h2 className="text-lg font-semibold text-white">{city.name}</h2>
+          <p className="text-sm text-white/60">
+            {[city.region, city.country].filter(Boolean).join(', ')}
+          </p>
         </div>
+        <span className="text-4xl" aria-hidden="true">
+          {icon}
+        </span>
+      </header>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Metric icon="💧" label="Umidade" value={`${Math.round(current.humidity)}%`} />
-          <Metric
-            icon="💨"
-            label="Vento"
-            value={`${Math.round(current.windSpeed)} km/h`}
-          />
-          <Metric
-            icon="🌧️"
-            label="Precipitação"
-            value={`${current.precipitation} mm`}
-          />
-          <Metric
-            icon="📊"
-            label="Pressão"
-            value={`${Math.round(current.pressure)} hPa`}
-          />
+      <p className="mt-4 text-5xl font-bold text-white sm:text-6xl lg:text-7xl">
+        {formatTemperature(current.temperatureC, unit)}
+      </p>
+      <p className="mt-1 text-base text-white/70">{label}</p>
+      <p className="text-sm text-white/50">
+        Sensação térmica: {formatTemperature(current.apparentTemperatureC, unit)}
+      </p>
+
+      <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-white/50">Umidade</dt>
+          <dd className="text-lg font-medium text-white">
+            {formatMetric(current.humidityPercent, '%')}
+          </dd>
         </div>
-      </div>
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-white/50">Vento</dt>
+          <dd className="text-lg font-medium text-white">
+            {formatMetric(current.windSpeedKmh, ' km/h')}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-white/50">Precipitação</dt>
+          <dd className="text-lg font-medium text-white">
+            {formatMetric(current.precipitationMm, ' mm')}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-white/50">Pressão</dt>
+          <dd className="text-lg font-medium text-white">
+            {formatMetric(current.pressureHpa, ' hPa')}
+          </dd>
+        </div>
+      </dl>
     </section>
   );
 }
+
+export default memo(CurrentWeather);

@@ -1,28 +1,53 @@
+import { formatWeatherDate } from '../lib/date';
+import { toDisplayTemperature } from '../lib/temperature';
+import { mapWeatherCode } from '../lib/weatherCode';
 import type { ForecastDay, Unit } from '../types/weather';
-import { formatTemperature } from '../lib/temperature';
-import { getWeatherIcon, getWeatherLabel } from '../lib/weatherCodes';
-import { getDayLabel, getShortDate } from '../lib/format';
 
 interface ForecastCardProps {
   day: ForecastDay;
-  index: number;
+  timezone: string;
   unit: Unit;
 }
 
-/** Card de um dia da previsão. */
-export default function ForecastCard({ day, index, unit }: ForecastCardProps) {
+function formatTemperature(valueC: number | null | undefined, unit: Unit): string {
+  if (typeof valueC !== 'number' || !Number.isFinite(valueC)) return '—';
+  const value = toDisplayTemperature(valueC, unit);
+  if (value === undefined || !Number.isFinite(value)) return '—';
+  return `${Math.round(value)}°${unit === 'celsius' ? 'C' : 'F'}`;
+}
+
+export default function ForecastCard({ day, timezone, unit }: ForecastCardProps) {
+  const { label, icon } = mapWeatherCode(day.weatherCode);
+  const dayLabel = formatWeatherDate(day.date, timezone);
+  const rainChance =
+    typeof day.precipitationProbabilityPercent !== 'number' ||
+    !Number.isFinite(day.precipitationProbabilityPercent)
+      ? '—'
+      : `${day.precipitationProbabilityPercent}%`;
+
   return (
-    <li className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4 text-center backdrop-blur-md">
-      <p className="font-semibold">{getDayLabel(day.date, index)}</p>
-      <p className="text-xs text-white/50">{getShortDate(day.date)}</p>
-      <span aria-hidden="true" className="text-3xl" title={getWeatherLabel(day.weatherCode)}>
-        {getWeatherIcon(day.weatherCode)}
+    <div className="flex flex-col items-center gap-1 rounded-2xl border border-white/10 bg-white/5 p-4 text-center shadow-glass backdrop-blur-md">
+      <p className="text-sm font-medium capitalize text-white/80">{dayLabel}</p>
+      <span className="text-3xl" aria-hidden="true">
+        {icon}
       </span>
-      <p className="text-sm">
-        <span className="font-semibold">{formatTemperature(day.max, unit)}</span>{' '}
-        <span className="text-white/50">{formatTemperature(day.min, unit)}</span>
+      <p className="sr-only">{label}</p>
+      <p className="text-sm text-white">
+        <span className="sr-only">
+          Máxima {formatTemperature(day.maxTemperatureC, unit)}, mínima{' '}
+          {formatTemperature(day.minTemperatureC, unit)}
+        </span>
+        <span aria-hidden="true" className="font-semibold">
+          {formatTemperature(day.maxTemperatureC, unit)}
+        </span>{' '}
+        <span aria-hidden="true" className="text-white/50">
+          {formatTemperature(day.minTemperatureC, unit)}
+        </span>
       </p>
-      <p className="text-xs text-accent-400">💧 {day.precipitationProbability}%</p>
-    </li>
+      <p className="text-xs text-accent-400">
+        <span className="sr-only">Chance de chuva: {rainChance}</span>
+        <span aria-hidden="true">💧 {rainChance}</span>
+      </p>
+    </div>
   );
 }
